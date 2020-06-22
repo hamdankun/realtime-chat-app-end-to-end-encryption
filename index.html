@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat</title>
+    <link rel="stylesheet" type="text/css" href="/styles.css" />
+</head>
+
+<body>
+    <div class="chat-panel">
+        <div>
+            <h3>Chat End-to-End Encryption By Hamdan Hanafi Using Node, CryptoJS and SocketIO</h3>
+            <h2 class="nickname"></h2>
+        </div>
+        <div class="chat-conversation"></div>
+        <div class="chat-action">
+            <textarea name="message" class="message-text"></textarea>
+            <button class="send-message">Kirim Pesan</button>
+        </div>
+    </div>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <script type="text/javascript" src="/node_modules/socket.io-client/dist/socket.io.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        var socket = io();
+
+
+        var userID = makeid(20);
+
+        socket.on('new-message', function (data) {
+            if (data.user_id !== userID) {
+                console.log('ciphertext -> ', data.message)
+                console.log('setelah di dekripsi menjadi -> ', descryptMessage(data.message))
+                _apendElementAsStranger(descryptMessage(data.message));
+            }
+        });
+
+        socket.on('send-chat-list', function (data) {
+            if (userID === data.request_user_id) {
+                console.log('masuk sisni engga', data.chatLists);
+                for (var i = 0; i < data.chatLists.length; i++) {
+                    var chat = data.chatLists[i];
+                    _apendElementAsStranger(descryptMessage(chat.message));
+                }
+            }
+        })
+
+        socket.emit('load-message', { request_user_id: userID });
+
+        $('.nickname').html('Nickname : ' + userID);
+
+        $('.send-message').on('click', function () {
+            var messageElement = $('.message-text');
+
+            if (messageElement.val() === '') {
+                alert('Harap Masukan Pesan!');
+            } else {
+                _apendElementAsMe(messageElement.val());
+                console.log('Hasil Enkripsi',
+                    { message: encryptMessage(messageElement.val()), user_id: userID }
+                )
+                socket.emit('send-message', { message: encryptMessage(messageElement.val()), user_id: userID });
+                messageElement.val('');
+            }
+        });
+
+        function _apendElementAsMe(message) {
+            $('.chat-conversation').append('<div class="chat-message chat-message-me">'
+                + '<p>' + message + '</p>'
+                + '</div>');
+        }
+
+        function _apendElementAsStranger(message) {
+            $('.chat-conversation').append('<div class="chat-message chat-message-stranger">'
+                + '<p>' + message + '</p>'
+                + '</div>');
+        }
+
+        function makeid(length) {
+            var result = '';
+            var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            var charactersLength = characters.length;
+            for (var i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * charactersLength));
+            }
+            return result;
+        }
+
+        function encryptMessage(planText) {
+            var encryptMessage = CryptoJS.DES.encrypt(planText, 'hanya_kita_yang_tahu');
+            return encryptMessage.toString();
+        }
+
+        function descryptMessage(chipperText) {
+            var decrypted = CryptoJS.DES.decrypt(chipperText, 'hanya_kita_yang_tahu');
+            return decrypted.toString(CryptoJS.enc.Utf8);
+        }
+
+    </script>
+</body>
+
+</html>
